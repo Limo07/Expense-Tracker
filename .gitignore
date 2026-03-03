@@ -1,0 +1,22 @@
+# n8n local files
+.n8n/
+*.env
+.env.*
+
+# Credentials & secrets — NEVER commit these
+*credentials*
+*secrets*
+*.key
+*.pem
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+
+# Logs
+*.log
+logs/

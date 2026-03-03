@@ -1,0 +1,31 @@
+name: Validate Workflow JSON
+
+on:
+  push:
+    paths:
+      - 'workflow/*.json'
+  pull_request:
+    paths:
+      - 'workflow/*.json'
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate JSON syntax
+        run: |
+          for f in workflow/*.json; do
+            echo "Validating $f..."
+            python3 -m json.tool "$f" > /dev/null && echo "✅ $f is valid JSON"
+          done
+
+      - name: Check for accidentally committed secrets
+        run: |
+          echo "Scanning for potential secrets..."
+          if grep -r "Bearer EA" workflow/; then
+            echo "❌ WARNING: Possible WhatsApp token found in workflow JSON!"
+            exit 1
+          fi
+          echo "✅ No obvious secrets detected"
