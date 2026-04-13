@@ -1,0 +1,847 @@
+{
+  "name": "Daily Expense Tracker",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.userMessage }}",
+        "options": {
+          "systemMessage": "=Role: You are a specialized Personal Expense Tracker. Your sole purpose is to parse user input into structured data for financial logging.\n\nExtraction Rules\nOnly Extract the following from the user's input:\n\n- Description: A brief, clear summary of the expense. Description should be concise!\n\n- Amount: A numeric value only. Strip all currency symbols or text (e.g., convert \"500 KES\" or \"Ksh 500\" to 500).\n\n- Category: You MUST map the expense to exactly one of the following:\nFood & Dining, Transport, Clothing, Utilities, Health & Medical, Entertainment, Education, Work & Business, Debt Payment, Savings & Investment, Charity & Giving.\n\n- Date/Time: Use the provided timestamp: {{ $now.format('yyyy-MM-dd HH:mm:ss') }}.\n\nTool Execution Rules:\nYou MUST use your available tools to save the extracted data in two places:\n\n- Google Sheets: Log the expense here for human-readable tracking.\n\n- Supabase: Log the expense here for database querying later.\n\nWhen saving to Supabase & Google Sheets, you must pass only these exact fields to the tools:\n\n- description\n\n- category\n\n- amount\n\n- date_time\n\nDo not send any other fields to the databases.\n\n\nConstraints:\n- If the user's description is vague, use your best judgment to categorize it.\n- The default currency is KES, but only parse the number to your tools\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1696,
+        1168
+      ],
+      "id": "8df13181-2e6e-4de7-87a0-61c607145202",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.message.text !== undefined }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals"
+                    },
+                    "id": "c53921ab-9967-45e8-9036-9c833508366c"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "text"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "da15d938-a48a-4c43-bb77-8275993263fb",
+                    "leftValue": "={{ $json.message.voice !== undefined }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "audio"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "3c4ed1b4-04b0-4873-be5a-dfc3bc24c71e",
+                    "leftValue": "={{ $json.message.photo !== undefined }}",
+                    "rightValue": true,
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "image"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        256,
+        1152
+      ],
+      "id": "1a8a2cab-4acb-4032-8902-bd994dbf58ba",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4.1",
+          "mode": "list",
+          "cachedResultName": "gpt-4.1"
+        },
+        "responsesApiEnabled": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1584,
+        1392
+      ],
+      "id": "98805912-1e75-4ca8-8c3a-85a459c646da",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "33JiHQtm7Nhjoysw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "expenses",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "description",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues0_Field_Value', ``, 'string') }}"
+            },
+            {
+              "fieldId": "category",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues1_Field_Value', ``, 'string') }}"
+            },
+            {
+              "fieldId": "amount",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues2_Field_Value', ``, 'string') }}"
+            },
+            {
+              "fieldId": "date_time",
+              "fieldValue": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('fieldValues3_Field_Value', ``, 'string') }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        1840,
+        1392
+      ],
+      "id": "cda0c38f-4e76-4e8e-9087-c480024efddb",
+      "name": "Create a row in Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "p3DvtvrYJOeyaW7n",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ String($('Telegram Trigger').item.json.message.from.id) }}\""
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryRedisChat",
+      "typeVersion": 1.5,
+      "position": [
+        1712,
+        1392
+      ],
+      "id": "ff198aac-2755-4d40-9686-57f5fb2cca8e",
+      "name": "Redis Chat Memory",
+      "credentials": {
+        "redis": {
+          "id": "lnzsqtMzNbkj0E7z",
+          "name": "Redis account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "fbbdba39-a522-4d69-8013-c5aee5f8a564",
+              "name": "userMessage",
+              "value": "={{ $json.message.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1360,
+        976
+      ],
+      "id": "d861aba4-ffe8-4842-a87b-efb16f6c0278",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        32,
+        1168
+      ],
+      "id": "1ef3a9d9-8297-4082-9b79-6e94b3fdb285",
+      "name": "Telegram Trigger",
+      "webhookId": "584fe1b7-0b2d-4ab0-98e1-e2c9319c03a2",
+      "credentials": {
+        "telegramApi": {
+          "id": "iMEKMnZp7OXwn1yo",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "YOUR_SPREADSHEET_ID",
+          "mode": "list",
+          "cachedResultName": "Expense tracker",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/YOUR_SPREADSHEET_ID/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Date & Time": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Date___Time', ``, 'string') }}",
+            "Description": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Description', ``, 'string') }}",
+            "Category": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Category', ``, 'string') }}",
+            "Amount": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('Amount', ``, 'string') }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Date & Time",
+              "displayName": "Date & Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Description",
+              "displayName": "Description",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Amount",
+              "displayName": "Amount",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        1968,
+        1392
+      ],
+      "id": "54df3795-9a5f-432d-9470-d427d52d1dcb",
+      "name": "Append row in sheet in Google Sheets",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "JlOsTrrjbfK3osnt",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 21
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        32,
+        1696
+      ],
+      "id": "edf8ea21-3211-4b7d-98a6-1f63720f77fa",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are a personal finance assistant analyzing daily expenses.\n\nToday's date: {{ $now.format('yyyy-MM-dd') }}\n\nInstructions:\n1. Use the Supabase tool to fetch all expenses from \n   the 'expenses' table for today: {{ $now.format('yyyy-MM-dd') }}\n\n2. Generate a concise Telegram summary in this exact format:\n\n📅 *Daily Expense Report - [Date]*\n\n💰 *Total: KES [amount]*\n\n📊 *By Category:*\n- [Category]: KES [amount]\n- [Category]: KES [amount]\n\n💡 *Insight:* [One sentence about spending pattern]\n🎯 *Tip:* [One actionable money saving tip]\n\nRules:\n- Keep it under 15 lines\n- No tables, no headers with ###\n- If no expenses: \"No expenses logged today 🎉\""
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        256,
+        1696
+      ],
+      "id": "4a1a7a57-3060-4252-9087-a95c5879416b",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "33JiHQtm7Nhjoysw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $env.TELEGRAM_CHAT_ID }}",
+        "text": "={{ $json.output[0].content[0].text }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        608,
+        1696
+      ],
+      "id": "fb009c14-7942-4a31-a1ba-7178a612a1ca",
+      "name": "Send message",
+      "webhookId": "64cd1b8a-6db6-41ec-8d93-0a0f7b27c548",
+      "credentials": {
+        "telegramApi": {
+          "id": "iMEKMnZp7OXwn1yo",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "tableId": "expenses",
+        "filterType": "none"
+      },
+      "type": "n8n-nodes-base.supabaseTool",
+      "typeVersion": 1,
+      "position": [
+        320,
+        1920
+      ],
+      "id": "3cf656ee-939d-4a18-b31e-eb63ded16f4d",
+      "name": "Get many rows in Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "p3DvtvrYJOeyaW7n",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "GPT-4O-MINI"
+        },
+        "text": "Analyze this image and extract expense information.\nIdentify: \n- What was purchased (Description)\n- The amount/price (Numbers only)\n- The category (Food & Dining, Transport, Shopping, \n    Utilities, Health & Medical, Entertainment, \n    Rent & Housing, Work & Business, Education, Other)\n\nReturn ONLY this format:\n  -Description: [what was bought]\n  -Amount: [number only]\n -Category: [category]",
+        "imageUrls": "=https://api.telegram.org/file/botYOUR_BOT_TOKEN/{{ $('HTTP Request3').item.json.result.file_path }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        928,
+        1360
+      ],
+      "id": "de57efbd-81d0-4284-9528-9574d5a30384",
+      "name": "Analyze image",
+      "credentials": {
+        "openAiApi": {
+          "id": "33JiHQtm7Nhjoysw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "381814d0-a490-4b26-904b-12cb9851862e",
+              "name": "userMessage",
+              "value": "={{ $json['0'].content[0].text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1152,
+        1360
+      ],
+      "id": "5ab74cbf-b8cd-4d1d-ae36-9a7206855465",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "resource": "audio",
+        "operation": "transcribe",
+        "options": {
+          "language": "=en",
+          "temperature": 0
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.1,
+      "position": [
+        1136,
+        1168
+      ],
+      "id": "6ecb9c60-f6f7-4cb2-af47-fd85eb8a8aa2",
+      "name": "Transcribe a recording",
+      "credentials": {
+        "openAiApi": {
+          "id": "33JiHQtm7Nhjoysw",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "3b085d4d-7e9a-4c68-87ff-9414dddb4652",
+              "name": "userMessage",
+              "value": "={{ $json.text }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1360,
+        1168
+      ],
+      "id": "c74862d2-7519-4976-b8e2-eb008d9e050e",
+      "name": "Edit Fields2"
+    },
+    {
+      "parameters": {
+        "content": "# 💰 Personal Expense Tracker\n- Logs expenses via Telegram (text, voice, image)\n- Sends daily report at 9PM EAT",
+        "width": 1120
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        688
+      ],
+      "typeVersion": 1,
+      "id": "add2b54c-6bfd-4d58-9f23-13a1aa09ead7",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "📥 INPUT LAYER\nReceives Telegram messages and \nroutes by type:\n- Text → AI Agent\n- Audio → Transcription pipeline\n- Image → Vision pipeline\n",
+        "height": 320,
+        "width": 512,
+        "color": "#237113"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -64,
+        1024
+      ],
+      "typeVersion": 1,
+      "id": "b7d28ff4-c5f9-447a-ab04-8aa67d5d1e54",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "🤖 AI AGENT\nExtracts: Description, Amount, Category\nSaves to:\n- Google Sheets (human readable)\n- Supabase (AI queryable)\nMemory: Redis (conversation context)\n",
+        "height": 592,
+        "width": 560,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        1536,
+        944
+      ],
+      "id": "524f63a8-ffc5-454d-b823-164249c7604e",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "⏰ 9PM DAILY REPORT\nFetches today's expenses from Supabase\nGenerates AI summary with insights\nSends via Telegram",
+        "height": 480,
+        "width": 1216,
+        "color": "#787915"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -240,
+        1584
+      ],
+      "id": "1420c852-10de-4a9d-9ce9-3539b9004f64",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/botYOUR_BOT_TOKEN/getFile?file_id={{ $json.message.voice.file_id }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        720,
+        1168
+      ],
+      "id": "5c8d29fc-a39f-4779-8dd0-836e031064e2",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/file/botYOUR_BOT_TOKEN/{{ $json.result.file_path }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        912,
+        1168
+      ],
+      "id": "25217881-6ddb-4b67-9e6c-9675caf4ad24",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.telegram.org/botYOUR_BOT_TOKEN/getFile?file_id={{ $json.message.photo[2].file_id }}\n",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        496,
+        1392
+      ],
+      "id": "f38eae0b-cf8a-4eb4-b33b-578da664b268",
+      "name": "HTTP Request3"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "HTTP Request3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a row in Supabase": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Redis Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet in Google Sheets": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many rows in Supabase": {
+      "ai_tool": [
+        [
+          {
+            "node": "Message a model",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze image": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Transcribe a recording": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields2": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request1": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        [
+          {
+            "node": "Transcribe a recording",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "Analyze image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false,
+    "timeSavedMode": "fixed",
+    "errorWorkflow": "TSD4hzAl1Ln5oE6e",
+    "timezone": "Africa/Nairobi",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "04d6eaca-a62a-4240-b499-55f9d2d9318e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "371125a5df2754f507952d62d05cb0de3fbea9391809ff8f10731a72ed41e4da"
+  },
+  "id": "BFxALW3wkgWu5yqc",
+  "tags": []
+}
