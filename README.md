@@ -1,13 +1,13 @@
-# 💰 Daily Expense Tracker — n8n Workflow
+# Daily Expense Tracker — n8n Workflow
 
-An AI-powered personal expense tracker that logs expenses via **WhatsApp** (text, voice, or image) and sends a **daily summary report at 9PM EAT**.
+An AI-powered personal expense tracker that logs expenses via **Telegram** (text, voice, or image) and sends a **daily summary report at 9PM EAT**.
 
 ---
 
-## 🧠 How It Works
+## How It Works
 
 ```
-WhatsApp Message
+Telegram Message
      │
      ▼
   [Switch] ──────────────────────────┐
@@ -24,23 +24,23 @@ WhatsApp Message
      Google Sheets         Supabase
    (human-readable)    (AI-queryable)
 
-⏰ 9PM Daily: Supabase → GPT Summary → WhatsApp
+⏰ 9PM Daily: Supabase → GPT Summary → Telegram
 ```
 
 ---
 
-## ✨ Features
+## Features
 
 - **Multi-modal input** — log expenses by typing, speaking, or photographing a receipt
 - **AI extraction** — GPT-4.1 parses description, amount, and category automatically
 - **Dual storage** — Google Sheets for human review + Supabase for AI querying
-- **Conversation memory** — Redis keeps context across messages (per WhatsApp number)
+- **Conversation memory** — Redis keeps context across messages (per Telegram user ID)
 - **Daily report** — Automated 9PM EAT summary with spending insights and tips
 - **Smart categorization** — Maps expenses to 11 standard categories
 
 ---
 
-## 📂 Expense Categories
+## Expense Categories
 
 | Category | Examples |
 |---|---|
@@ -58,12 +58,12 @@ WhatsApp Message
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
 | Tool | Purpose |
 |---|---|
 | [n8n](https://n8n.io) | Workflow automation |
-| WhatsApp Business API | Input & output channel |
+| Telegram Bot API | Input & output channel |
 | OpenAI GPT-4.1 | Expense extraction & chat |
 | OpenAI GPT-4o-mini | Image analysis & daily report |
 | OpenAI Whisper | Voice transcription |
@@ -73,18 +73,25 @@ WhatsApp Message
 
 ---
 
-## 🚀 Setup Guide
+## Setup Guide
 
 ### Prerequisites
 
 - n8n instance (self-hosted or cloud)
-- WhatsApp Business API access (Meta Developer account)
+- Telegram bot (create via [@BotFather](https://t.me/BotFather))
 - OpenAI API key
 - Google Sheets OAuth credentials
 - Supabase project
 - Redis instance
 
-### 1. Supabase — Create the `expenses` table
+### 1. Create a Telegram Bot
+
+1. Open Telegram and message [@BotFather](https://t.me/BotFather)
+2. Send `/newbot` and follow the prompts
+3. Copy the bot token (format: `123456789:ABCdef...`)
+4. Send `/start` to your new bot to activate it
+
+### 2. Supabase — Create the `expenses` table
 
 ```sql
 create table expenses (
@@ -97,7 +104,7 @@ create table expenses (
 );
 ```
 
-### 2. Google Sheets — Create the spreadsheet
+### 3. Google Sheets — Create the spreadsheet
 
 Create a sheet named **Sheet1** with these column headers in row 1:
 
@@ -105,39 +112,50 @@ Create a sheet named **Sheet1** with these column headers in row 1:
 Date & Time | Description | Category | Amount
 ```
 
-### 3. Import the n8n Workflow
+### 4. Import the n8n Workflow
 
 1. Open your n8n instance
 2. Go to **Workflows → Import from File**
-3. Upload `workflow/Daily_Expense_Tracker.json`
+3. Upload `Daily_Expense_Tracker_Telegram.json`
 4. Configure credentials for each node (see below)
 
-### 4. Configure Credentials
+### 5. Configure Credentials
 
 | Node | Credential Needed |
 |---|---|
-| WhatsApp Trigger | WhatsApp OAuth (Meta App) |
+| Telegram Trigger | Telegram Bot Token |
+| Telegram (send) | Telegram Bot Token |
 | OpenAI nodes | OpenAI API key |
 | Google Sheets | Google OAuth 2.0 |
 | Supabase nodes | Supabase URL + Service Key |
 | Redis Memory | Redis connection string |
-| WhatsApp (send) | WhatsApp Business API token |
 
-### 5. Update Configuration
+### 6. Update Configuration
 
-In the **"Send message"** node, update the recipient phone number to your WhatsApp number.
+In the HTTP Request nodes (file download), replace `YOUR_BOT_TOKEN` in the URL with your actual Telegram bot token:
+```
+https://api.telegram.org/file/botYOUR_BOT_TOKEN/{{ $json.result.file_path }}
+```
 
-In the **"Message a model"** (daily report) node, update the `phoneNumberId` to match your WhatsApp Business phone number ID.
+In the Google Sheets node, replace `YOUR_SPREADSHEET_ID` with your actual spreadsheet ID.
 
-### 6. Activate the Workflow
+### 7. Get Your Telegram Chat ID
 
-Toggle the workflow to **Active** in n8n. The WhatsApp webhook will register automatically.
+To receive the daily report, you need your chat ID:
+1. Send any message to your bot
+2. Visit: `https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates`
+3. Find `message.chat.id` in the response
+4. Set this as the Chat ID in the **Send message** node
+
+### 8. Activate the Workflow
+
+Toggle the workflow to **Active** in n8n. The Telegram webhook registers automatically.
 
 ---
 
-## 💬 Usage Examples
+## Usage Examples
 
-Send any of these to your WhatsApp bot number:
+Send any of these to your Telegram bot:
 
 **Text:**
 > "Spent 450 on lunch at KFC"
@@ -150,7 +168,7 @@ Send any of these to your WhatsApp bot number:
 
 ---
 
-## 📊 Daily Report Format
+## Daily Report Format
 
 ```
 📅 Daily Expense Report - 2025-01-15
@@ -168,23 +186,32 @@ Send any of these to your WhatsApp bot number:
 
 ---
 
-## ⚙️ Customization
+## Customization
 
 - **Report time** — Change the Schedule Trigger (currently 21:00 EAT / UTC+3)
 - **Currency** — Default is KES; update the AI Agent system prompt to change it
 - **Categories** — Edit the category list in the AI Agent system prompt
-- **Report recipient** — Update the phone number in the "Send message" node
+- **Report recipient** — Update the Chat ID in the "Send message" node
 
 ---
 
-## 🔒 Security Notes
+## Workflow Files
+
+| File | Description |
+|---|---|
+| `Daily_Expense_Tracker_Telegram.json` | Current version (Telegram) |
+| `Daily_Expense_Tracker_WhatsApp.json` | Original version (WhatsApp) |
+
+---
+
+## Security Notes
 
 - **Never commit API keys or tokens** to this repo — use n8n's credential manager
-- Rotate your WhatsApp Bearer token regularly
-- The workflow JSON in this repo has credentials removed — re-add them after import
+- The workflow JSON uses placeholders (`YOUR_BOT_TOKEN`, `YOUR_SPREADSHEET_ID`) — replace after import in n8n
+- Telegram bot tokens do not expire, but you can revoke and regenerate via @BotFather at any time
 
 ---
 
-## 📄 License
+## License
 
 MIT License — feel free to use, modify, and share.
